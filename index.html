@@ -27,52 +27,61 @@
             background-color: #000;
             display: block;
             margin: 10px auto;
-            max-height: 42vh;
+            max-height: 45vh;
         }
         .controls-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
-            margin-top: 10px;
+            gap: 12px;
+            margin-top: 15px;
             user-select: none;
         }
         .row {
             display: flex;
-            gap: 12px;
+            gap: 15px;
+            align-items: center;
         }
         .btn {
             background: #3a3a4a;
             color: white;
             border: none;
-            padding: 12px 22px;
-            font-size: 1.2rem;
+            padding: 15px 25px;
+            font-size: 1.3rem;
             font-weight: bold;
             border-radius: 8px;
-            touch-action: manipulation;
+            touch-action: none; /* Crucial: stops the browser from interfering with holds */
             box-shadow: 0 4px #1a1a24;
-            min-width: 60px;
+            min-width: 65px;
         }
         .btn:active {
             transform: translateY(4px);
             box-shadow: 0 0px #1a1a24;
             background: #505065;
         }
+        /* Single distinct rotation button styling */
         .btn-rotate {
             background: #0DC2FF;
             color: #000;
+            min-width: 80px;
+            font-size: 1.5rem;
         }
         .btn-rotate:active {
             background: #009ecf;
         }
-        /* Style for the new Instant Hard Drop button */
         .btn-hard-drop {
             background: #FFE138;
             color: #000;
-            min-width: 140px; /* Wider button so it looks like a mini spacebar */
         }
         .btn-hard-drop:active {
             background: #cca500;
+        }
+        .btn-drop {
+            background: #FF0D72;
+            min-width: 120px;
+        }
+        .btn-drop:active {
+            background: #cc0a5b;
         }
     </style>
 </head>
@@ -83,16 +92,13 @@
 
     <div class="controls-container">
         <div class="row">
-            <button class="btn btn-rotate" id="rotate-left">⟲</button>
-            <button class="btn btn-rotate" id="rotate-right">⟳</button>
+            <button class="btn btn-rotate" id="rotate">↻ ROTATE</button>
+            <button class="btn btn-hard-drop" id="hard-drop">⚡ DROP</button>
         </div>
         <div class="row">
             <button class="btn" id="move-left">◀</button>
-            <button class="btn btn-hard-drop" id="hard-drop">⚡ DROP</button>
+            <button class="btn btn-drop" id="drop-down">▼ HOLD DROP</button>
             <button class="btn" id="move-right">▶</button>
-        </div>
-        <div class="row">
-            <button class="btn" id="drop-down" style="min-width: 100px;">▼ Soft Drop</button>
         </div>
     </div>
 
@@ -204,12 +210,11 @@
             dropCounter = 0;
         }
 
-        // New function: Loops moving down until a collision happens
         function playerHardDrop() {
             while (!collide(arena, player)) {
                 player.pos.y++;
             }
-            player.pos.y--; // Back up one step out of the collision
+            player.pos.y--;
             merge(arena, player);
             playerReset();
             arenaSweep();
@@ -293,7 +298,7 @@
             score: 0,
         };
 
-        // Keyboard Controls
+        // Keyboard Controls (Up arrow/W now maps to standard Clockwise rotation)
         document.addEventListener('keydown', event => {
             if (event.keyCode === 37) {
                 playerMove(-1);
@@ -301,22 +306,59 @@
                 playerMove(1);
             } else if (event.keyCode === 40) {
                 playerDrop();
-            } else if (event.keyCode === 32) { // Spacebar for Hard Drop
+            } else if (event.keyCode === 32) {
                 playerHardDrop();
-            } else if (event.keyCode === 81) {
-                playerRotate(-1);
-            } else if (event.keyCode === 87) {
-                playerRotate(1);
+            } else if (event.keyCode === 38 || event.keyCode === 87 || event.keyCode === 81) { 
+                playerRotate(1); // Standardized to Clockwise
             }
         });
 
-        // Touch Button Event Listeners
+        // Touch Event Logic for Continuous Holding (Soft Drop)
+        let dropIntervalId = null;
+
+        const softDropButton = document.getElementById('drop-down');
+
+        function startSoftDrop(e) {
+            if(e) e.preventDefault();
+            playerDrop(); // Drop once instantly on initial touch
+            
+            // Loop dropping every 80 milliseconds as long as they hold down
+            if (!dropIntervalId) {
+                dropIntervalId = setInterval(() => {
+                    playerDrop();
+                }, 80); 
+            }
+        }
+
+        function stopSoftDrop(e) {
+            if(e) e.preventDefault();
+            if (dropIntervalId) {
+                clearInterval(dropIntervalId);
+                dropIntervalId = null;
+            }
+        }
+
+        // Event listeners for mobile holding gestures
+        softDropButton.addEventListener('touchstart', startSoftDrop);
+        softDropButton.addEventListener('touchend', stopSoftDrop);
+        softDropButton.addEventListener('touchcancel', stopSoftDrop);
+
+        // Backup listeners for mouse testing on desktop
+        softDropButton.addEventListener('mousedown', startSoftDrop);
+        softDropButton.addEventListener('mouseup', stopSoftDrop);
+        softDropButton.addEventListener('mouseleave', stopSoftDrop);
+
+        // Normal single-tap buttons
+        document.getElementById('move-left').addEventListener('touchstart', (e) => { e.preventDefault(); playerMove(-1); });
+        document.getElementById('move-right').addEventListener('touchstart', (e) => { e.preventDefault(); playerMove(1); });
+        document.getElementById('hard-drop').addEventListener('touchstart', (e) => { e.preventDefault(); playerHardDrop(); });
+        document.getElementById('rotate').addEventListener('touchstart', (e) => { e.preventDefault(); playerRotate(1); });
+
+        // Backup desktop mouse support for structural buttons
         document.getElementById('move-left').addEventListener('click', () => playerMove(-1));
         document.getElementById('move-right').addEventListener('click', () => playerMove(1));
-        document.getElementById('drop-down').addEventListener('click', () => playerDrop());
         document.getElementById('hard-drop').addEventListener('click', () => playerHardDrop());
-        document.getElementById('rotate-left').addEventListener('click', () => playerRotate(-1));
-        document.getElementById('rotate-right').addEventListener('click', () => playerRotate(1));
+        document.getElementById('rotate').addEventListener('click', () => playerRotate(1));
 
         playerReset();
         updateScore();
