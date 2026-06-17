@@ -13,10 +13,17 @@
             margin: 0;
             padding: 10px;
             overscroll-behavior-y: contain; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 92vh; /* Use screen height to pin controls to the bottom */
+        }
+        .header {
+            flex-shrink: 0;
         }
         .title {
             font-size: 1.5rem;
-            margin-top: 5px;
+            margin: 5px 0 0 0;
         }
         #score {
             font-size: 1.2rem;
@@ -26,78 +33,102 @@
             border: solid 2px #fff;
             background-color: #000;
             display: block;
-            margin: 10px auto;
+            margin: 0 auto;
             max-height: 45vh;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
         }
+        
+        /* Console-Style Split Controls Layout */
         .controls-container {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-            margin-top: 15px;
+            justify-content: space-between;
+            align-items: flex-end;
+            width: 100%;
+            max-width: 450px;
+            margin: 0 auto cubic-bezier(0.1, 0.7, 1.0, 0.1);
+            padding-bottom: 20px;
             user-select: none;
         }
-        .row {
+
+        /* Left Side: Movement D-Pad */
+        .dpad-side {
             display: flex;
-            gap: 15px;
-            align-items: center;
+            gap: 8px;
         }
+
+        /* Right Side: Action Cluster */
+        .action-side {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        /* Universal Button Styling */
         .btn {
             background: #3a3a4a;
             color: white;
             border: none;
-            padding: 15px 25px;
-            font-size: 1.3rem;
             font-weight: bold;
-            border-radius: 8px;
-            touch-action: none; /* Stops system interference with long-press gestures */
-            box-shadow: 0 4px #1a1a24;
-            min-width: 65px;
+            border-radius: 12px;
+            touch-action: none; 
+            box-shadow: 0 5px #1a1a24;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.05s;
         }
         .btn:active {
             transform: translateY(4px);
-            box-shadow: 0 0px #1a1a24;
-            background: #505065;
+            box-shadow: 0 1px #1a1a24;
+            background: #4e4e64;
+        }
+
+        /* Specific Button Sizes & Colors */
+        .btn-dir {
+            width: 65px;
+            height: 65px;
+            font-size: 1.5rem;
+            background: #2e2e3a;
+        }
+        .btn-action {
+            width: 70px;
+            height: 60px;
+            font-size: 1rem;
         }
         .btn-rotate {
             background: #0DC2FF;
             color: #000;
-            min-width: 80px;
-            font-size: 1.5rem;
+            grid-column: span 2; /* Stretch rotate across the top of the actions */
+            height: 55px;
+            font-size: 1.1rem;
         }
-        .btn-rotate:active {
-            background: #009ecf;
-        }
-        .btn-hard-drop {
-            background: #FFE138;
-            color: #000;
-        }
-        .btn-hard-drop:active {
-            background: #cca500;
-        }
-        .btn-drop {
-            background: #FF0D72;
-            min-width: 120px;
-        }
-        .btn-drop:active {
-            background: #cc0a5b;
-        }
+        .btn-rotate:active { background: #009ecf; }
+        
+        .btn-drop { background: #FF0D72; font-size: 1.2rem; }
+        .btn-drop:active { background: #cc0a5b; }
+        
+        .btn-hard-drop { background: #FFE138; color: #000; font-size: 1.2rem; }
+        .btn-hard-drop:active { background: #cca500; }
     </style>
 </head>
 <body>
-    <div class="title">Tetris</div>
-    <div id="score">Score: 0</div>
+    <div class="header">
+        <div class="title">Tetris</div>
+        <div id="score">Score: 0</div>
+    </div>
+
     <canvas id="tetris" width="240" height="400"></canvas>
 
     <div class="controls-container">
-        <div class="row">
-            <button class="btn btn-rotate" id="rotate">↻ ROTATE</button>
-            <button class="btn btn-hard-drop" id="hard-drop">⚡ DROP</button>
+        <div class="dpad-side">
+            <button class="btn btn-dir" id="move-left">◀</button>
+            <button class="btn btn-dir" id="move-right">▶</button>
         </div>
-        <div class="row">
-            <button class="btn" id="move-left">◀</button>
-            <button class="btn btn-drop" id="drop-down">▼ HOLD DROP</button>
-            <button class="btn" id="move-right">▶</button>
+        
+        <div class="action-side">
+            <button class="btn btn-action btn-rotate" id="rotate">↻ ROTATE</button>
+            <button class="btn btn-action btn-drop" id="drop-down">▼</button>
+            <button class="btn btn-action btn-hard-drop" id="hard-drop">⚡</button>
         </div>
     </div>
 
@@ -123,7 +154,6 @@
             }
         }
 
-        // Collision logic
         function collide(arena, player) {
             const [m, o] = [player.matrix, player.pos];
             for (let y = 0; y < m.length; ++y) {
@@ -295,7 +325,7 @@
 
         function startContinuousAction(actionFunction, speedMs, e) {
             if(e) e.preventDefault();
-            actionFunction(); // Trigger immediately once on tap
+            actionFunction(); 
             
             if (!actionIntervalId) {
                 actionIntervalId = setInterval(actionFunction, speedMs); 
@@ -310,37 +340,35 @@
             }
         }
 
-        // Setup DOM targets
         const leftBtn = document.getElementById('move-left');
         const rightBtn = document.getElementById('move-right');
         const softDropBtn = document.getElementById('drop-down');
 
-        // Bind Hold actions for Left (100ms repeat)
+        // Left hold engine
         leftBtn.addEventListener('touchstart', (e) => startContinuousAction(() => playerMove(-1), 100, e));
         leftBtn.addEventListener('touchend', stopContinuousAction);
         leftBtn.addEventListener('touchcancel', stopContinuousAction);
 
-        // Bind Hold actions for Right (100ms repeat)
+        // Right hold engine
         rightBtn.addEventListener('touchstart', (e) => startContinuousAction(() => playerMove(1), 100, e));
         rightBtn.addEventListener('touchend', stopContinuousAction);
         rightBtn.addEventListener('touchcancel', stopContinuousAction);
 
-        // Bind Hold actions for Soft Drop (80ms repeat)
+        // Soft Drop hold engine
         softDropBtn.addEventListener('touchstart', (e) => startContinuousAction(playerDrop, 80, e));
         softDropBtn.addEventListener('touchend', stopContinuousAction);
         softDropBtn.addEventListener('touchcancel', stopContinuousAction);
 
-        // Desktop Mouse click fallbacks for testing
+        // Desktop fallbacks
         leftBtn.addEventListener('mousedown', (e) => startContinuousAction(() => playerMove(-1), 100, null));
         rightBtn.addEventListener('mousedown', (e) => startContinuousAction(() => playerMove(1), 100, null));
         softDropBtn.addEventListener('mousedown', (e) => startContinuousAction(playerDrop, 80, null));
         window.addEventListener('mouseup', stopContinuousAction);
 
-        // Single tap touch actions for standard buttons
+        // Standard single tap elements
         document.getElementById('hard-drop').addEventListener('touchstart', (e) => { e.preventDefault(); playerHardDrop(); });
         document.getElementById('rotate').addEventListener('touchstart', (e) => { e.preventDefault(); playerRotate(1); });
 
-        // Desktop click actions for standard buttons
         document.getElementById('hard-drop').addEventListener('click', () => playerHardDrop());
         document.getElementById('rotate').addEventListener('click', () => playerRotate(1));
 
