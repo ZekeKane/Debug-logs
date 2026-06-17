@@ -35,7 +35,6 @@
         .stat-label { font-size: 0.75rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px;}
         .stat-val { font-size: 1.3rem; font-weight: bold; margin-top: 2px; color: #0DC2FF; }
         
-        /* Layout Grid for Canvas + Next Window */
         .game-container {
             display: flex;
             justify-content: center;
@@ -62,7 +61,6 @@
             border-radius: 6px;
         }
 
-        /* Ergonomic Split Controls Layout */
         .controls-container {
             display: flex;
             justify-content: space-between;
@@ -76,7 +74,6 @@
         .dpad-side { display: flex; gap: 12px; }
         .action-side { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 
-        /* Premium Mechanical Button Feel */
         .btn {
             background: linear-gradient(135deg, #3a3a4a, #272735);
             color: white;
@@ -123,7 +120,6 @@
 
     <div class="game-container">
         <canvas id="tetris" width="240" height="400"></canvas>
-        
         <div class="side-panel">
             <div class="stat-box" style="padding: 5px 8px;">
                 <div class="stat-label" style="font-size:0.65rem; margin-bottom:3px;">Next</div>
@@ -178,7 +174,8 @@
                 for (let x = 0; x < m[y].length; ++x) {
                     if (m[y][x] !== 0 &&
                        (arena[y + o.y + offset.y] &&
-                        arena[y + o.y + offset.x + x]) !== 0) {
+                        arena[y + o.y + offset.y][x + o.x + offset.x]) !== undefined &&
+                       (arena[y + o.y + offset.y][x + o.x + offset.x]) !== 0) {
                         return true;
                     }
                 }
@@ -202,7 +199,6 @@
             if (type === 'Z') return [[7, 7, 0], [0, 7, 7], [0, 0, 0]];
         }
 
-        // Calculates how far a piece can drop for the ghost shadow
         function getGhostY() {
             let ghostY = 0;
             while (!collide(arena, player, {x: 0, y: ghostY})) {
@@ -215,20 +211,15 @@
             context.fillStyle = '#080810';
             context.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Draw static landed board elements
             drawMatrix(arena, {x: 0, y: 0}, context);
 
-            // 2. Draw Ghost Piece Shadow
             const ghostY = getGhostY();
             drawMatrix(player.matrix, {x: player.pos.x, y: ghostY}, context, true);
 
-            // 3. Draw real active player piece
             drawMatrix(player.matrix, player.pos, context);
 
-            // 4. Draw Next Piece HUD Panel
             nextContext.fillStyle = '#080810';
             nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
-            // Center the next piece visual layout roughly in its 4x4 canvas mini box
             const nMatrix = createPiece(player.next);
             const xOff = nMatrix.length === 4 ? 0 : 0.5;
             const yOff = nMatrix.length === 2 ? 1 : 0.5;
@@ -245,16 +236,15 @@
                 row.forEach((value, x) => {
                     if (value !== 0) {
                         if (isGhost) {
-                            ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
                             ctx.strokeStyle = colors[value];
-                            ctx.lineWidth = 0.08;
+                            ctx.lineWidth = 0.06;
                             ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
                             ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
                         } else {
                             ctx.fillStyle = colors[value];
                             ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
-                            // Give pieces a sleek grid look inside the active blocks
-                            ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+                            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
                             ctx.lineWidth = 0.05;
                             ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
                         }
@@ -379,20 +369,13 @@
             else if (event.keyCode === 38 || event.keyCode === 87 || event.keyCode === 81) playerRotate(1);
         });
 
-        // Continuous Mobile Holding Engine Loop
-        let actionIntervalId = null;
-        function startContinuousAction(actionFunction, speedMs, e) {
-            if(e) e.preventDefault();
-            actionFunction(); 
-            if (!actionIntervalId) {
-                actionIntervalId = setInterval(actionFunction, speedMs); 
-            }
-        }
-        function stopContinuousAction(e) {
-            if(e) e.preventDefault();
-            if (actionIntervalId) {
-                clearInterval(actionIntervalId);
-                actionIntervalId = null;
+        // FIXED DIRECT INPUT REPEATER ENGINE
+        let holdTimer = null;
+
+        function clearHold() {
+            if (holdTimer) {
+                clearInterval(holdTimer);
+                holdTimer = null;
             }
         }
 
@@ -400,27 +383,45 @@
         const rightBtn = document.getElementById('move-right');
         const softDropBtn = document.getElementById('drop-down');
 
-        leftBtn.addEventListener('touchstart', (e) => startContinuousAction(() => playerMove(-1), 90, e));
-        leftBtn.addEventListener('touchend', stopContinuousAction);
-        leftBtn.addEventListener('touchcancel', stopContinuousAction);
+        // Left hold engine
+        leftBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            playerMove(-1);
+            clearHold();
+            holdTimer = setInterval(() => playerMove(-1), 90);
+        });
+        leftBtn.addEventListener('touchend', (e) => { e.preventDefault(); clearHold(); });
+        leftBtn.addEventListener('touchcancel', clearHold);
 
-        rightBtn.addEventListener('touchstart', (e) => startContinuousAction(() => playerMove(1), 90, e));
-        rightBtn.addEventListener('touchend', stopContinuousAction);
-        rightBtn.addEventListener('touchcancel', stopContinuousAction);
+        // Right hold engine
+        rightBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            playerMove(1);
+            clearHold();
+            holdTimer = setInterval(() => playerMove(1), 90);
+        });
+        rightBtn.addEventListener('touchend', (e) => { e.preventDefault(); clearHold(); });
+        rightBtn.addEventListener('touchcancel', clearHold);
 
-        softDropBtn.addEventListener('touchstart', (e) => startContinuousAction(playerDrop, 70, e));
-        softDropBtn.addEventListener('touchend', stopContinuousAction);
-        softDropBtn.addEventListener('touchcancel', stopContinuousAction);
+        // Soft Drop hold engine
+        softDropBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            playerDrop();
+            clearHold();
+            holdTimer = setInterval(() => playerDrop(), 60);
+        });
+        softDropBtn.addEventListener('touchend', (e) => { e.preventDefault(); clearHold(); });
+        softDropBtn.addEventListener('touchcancel', clearHold);
 
-        // Desktop Mouse Click Emulation Bindings
-        leftBtn.addEventListener('mousedown', () => startContinuousAction(() => playerMove(-1), 90, null));
-        rightBtn.addEventListener('mousedown', () => startContinuousAction(() => playerMove(1), 90, null));
-        softDropBtn.addEventListener('mousedown', () => startContinuousAction(playerDrop, 70, null));
-        window.addEventListener('mouseup', stopContinuousAction);
-
-        // Single Tap Triggers
+        // Single Taps
         document.getElementById('hard-drop').addEventListener('touchstart', (e) => { e.preventDefault(); playerHardDrop(); });
         document.getElementById('rotate').addEventListener('touchstart', (e) => { e.preventDefault(); playerRotate(1); });
+
+        // Desktop fallbacks
+        leftBtn.addEventListener('mousedown', () => { playerMove(-1); holdTimer = setInterval(() => playerMove(-1), 90); });
+        rightBtn.addEventListener('mousedown', () => { playerMove(1); holdTimer = setInterval(() => playerMove(1), 90); });
+        softDropBtn.addEventListener('mousedown', () => { playerDrop(); holdTimer = setInterval(() => playerDrop(), 60); });
+        window.addEventListener('mouseup', clearHold);
         document.getElementById('hard-drop').addEventListener('click', () => playerHardDrop());
         document.getElementById('rotate').addEventListener('click', () => playerRotate(1));
 
