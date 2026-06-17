@@ -167,16 +167,21 @@
             }
         }
 
+        // Fixed collision detection: simple and crash-proof
         function collide(arena, player, offset = {x: 0, y: 0}) {
             const m = player.matrix;
             const o = player.pos;
             for (let y = 0; y < m.length; ++y) {
                 for (let x = 0; x < m[y].length; ++x) {
-                    if (m[y][x] !== 0 &&
-                       (arena[y + o.y + offset.y] &&
-                        arena[y + o.y + offset.y][x + o.x + offset.x]) !== undefined &&
-                       (arena[y + o.y + offset.y][x + o.x + offset.x]) !== 0) {
-                        return true;
+                    if (m[y][x] !== 0) {
+                        const nextY = y + o.y + offset.y;
+                        const nextX = x + o.x + offset.x;
+                        if (nextY >= arena.length || nextX < 0 || nextX >= arena[0].length) {
+                            return true;
+                        }
+                        if (arena[nextY] && arena[nextY][nextX] !== 0) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -199,9 +204,11 @@
             if (type === 'Z') return [[7, 7, 0], [0, 7, 7], [0, 0, 0]];
         }
 
+        // Fixed Ghost Y Calculation with safety limit to guarantee no infinite loading loops
         function getGhostY() {
             let ghostY = 0;
-            while (!collide(arena, player, {x: 0, y: ghostY})) {
+            const maxSafetyHeight = 22; 
+            while (!collide(arena, player, {x: 0, y: ghostY}) && ghostY < maxSafetyHeight) {
                 ghostY++;
             }
             return player.pos.y + ghostY - 1;
@@ -369,7 +376,7 @@
             else if (event.keyCode === 38 || event.keyCode === 87 || event.keyCode === 81) playerRotate(1);
         });
 
-        // FIXED DIRECT INPUT REPEATER ENGINE
+        // Loop Repeater Engine
         let holdTimer = null;
 
         function clearHold() {
