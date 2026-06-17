@@ -16,7 +16,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            height: 94vh;
+            height: 92vh;
         }
         .header {
             display: flex;
@@ -46,7 +46,7 @@
             border: solid 3px #3a3a4a;
             background-color: #080810;
             display: block;
-            max-height: 46vh;
+            max-height: 44vh;
             border-radius: 6px;
             box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
@@ -68,7 +68,7 @@
             width: 100%;
             max-width: 450px;
             margin: 0 auto;
-            padding-bottom: 25px;
+            padding-bottom: 20px;
             user-select: none;
         }
         .dpad-side { display: flex; gap: 12px; }
@@ -167,21 +167,14 @@
             }
         }
 
-        // Fixed collision detection: simple and crash-proof
-        function collide(arena, player, offset = {x: 0, y: 0}) {
-            const m = player.matrix;
-            const o = player.pos;
+        function collide(arena, player) {
+            const [m, o] = [player.matrix, player.pos];
             for (let y = 0; y < m.length; ++y) {
                 for (let x = 0; x < m[y].length; ++x) {
-                    if (m[y][x] !== 0) {
-                        const nextY = y + o.y + offset.y;
-                        const nextX = x + o.x + offset.x;
-                        if (nextY >= arena.length || nextX < 0 || nextX >= arena[0].length) {
-                            return true;
-                        }
-                        if (arena[nextY] && arena[nextY][nextX] !== 0) {
-                            return true;
-                        }
+                    if (m[y][x] !== 0 &&
+                       (arena[y + o.y] &&
+                        arena[y + o.y][x + o.x]) !== 0) {
+                        return true;
                     }
                 }
             }
@@ -204,25 +197,11 @@
             if (type === 'Z') return [[7, 7, 0], [0, 7, 7], [0, 0, 0]];
         }
 
-        // Fixed Ghost Y Calculation with safety limit to guarantee no infinite loading loops
-        function getGhostY() {
-            let ghostY = 0;
-            const maxSafetyHeight = 22; 
-            while (!collide(arena, player, {x: 0, y: ghostY}) && ghostY < maxSafetyHeight) {
-                ghostY++;
-            }
-            return player.pos.y + ghostY - 1;
-        }
-
         function draw() {
             context.fillStyle = '#080810';
             context.fillRect(0, 0, canvas.width, canvas.height);
 
             drawMatrix(arena, {x: 0, y: 0}, context);
-
-            const ghostY = getGhostY();
-            drawMatrix(player.matrix, {x: player.pos.x, y: ghostY}, context, true);
-
             drawMatrix(player.matrix, player.pos, context);
 
             nextContext.fillStyle = '#080810';
@@ -238,23 +217,15 @@
             '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'
         ];
 
-        function drawMatrix(matrix, offset, ctx, isGhost = false) {
+        function drawMatrix(matrix, offset, ctx) {
             matrix.forEach((row, y) => {
                 row.forEach((value, x) => {
                     if (value !== 0) {
-                        if (isGhost) {
-                            ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-                            ctx.strokeStyle = colors[value];
-                            ctx.lineWidth = 0.06;
-                            ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
-                            ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
-                        } else {
-                            ctx.fillStyle = colors[value];
-                            ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
-                            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-                            ctx.lineWidth = 0.05;
-                            ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
-                        }
+                        ctx.fillStyle = colors[value];
+                        ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
+                        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                        ctx.lineWidth = 0.05;
+                        ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
                     }
                 });
             });
@@ -283,7 +254,10 @@
         }
 
         function playerHardDrop() {
-            player.pos.y = getGhostY();
+            while (!collide(arena, player)) {
+                player.pos.y++;
+            }
+            player.pos.y--;
             merge(arena, player);
             playerReset();
             arenaSweep();
@@ -367,7 +341,7 @@
         const arena = createMatrix(12, 20);
         const player = { pos: {x: 0, y: 0}, matrix: null, next: null, score: 0 };
 
-        // Desktop Inputs
+        // Desktop Key Bindings
         document.addEventListener('keydown', event => {
             if (event.keyCode === 37) playerMove(-1);
             else if (event.keyCode === 39) playerMove(1);
@@ -376,7 +350,7 @@
             else if (event.keyCode === 38 || event.keyCode === 87 || event.keyCode === 81) playerRotate(1);
         });
 
-        // Loop Repeater Engine
+        // Direct Touch Loop Repeater Engine
         let holdTimer = null;
 
         function clearHold() {
@@ -390,7 +364,7 @@
         const rightBtn = document.getElementById('move-right');
         const softDropBtn = document.getElementById('drop-down');
 
-        // Left hold engine
+        // Left hold button
         leftBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             playerMove(-1);
@@ -400,7 +374,7 @@
         leftBtn.addEventListener('touchend', (e) => { e.preventDefault(); clearHold(); });
         leftBtn.addEventListener('touchcancel', clearHold);
 
-        // Right hold engine
+        // Right hold button
         rightBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             playerMove(1);
@@ -410,7 +384,7 @@
         rightBtn.addEventListener('touchend', (e) => { e.preventDefault(); clearHold(); });
         rightBtn.addEventListener('touchcancel', clearHold);
 
-        // Soft Drop hold engine
+        // Soft Drop hold button
         softDropBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             playerDrop();
@@ -420,11 +394,11 @@
         softDropBtn.addEventListener('touchend', (e) => { e.preventDefault(); clearHold(); });
         softDropBtn.addEventListener('touchcancel', clearHold);
 
-        // Single Taps
+        // Instant Single Taps
         document.getElementById('hard-drop').addEventListener('touchstart', (e) => { e.preventDefault(); playerHardDrop(); });
         document.getElementById('rotate').addEventListener('touchstart', (e) => { e.preventDefault(); playerRotate(1); });
 
-        // Desktop fallbacks
+        // Desktop Click Mappings
         leftBtn.addEventListener('mousedown', () => { playerMove(-1); holdTimer = setInterval(() => playerMove(-1), 90); });
         rightBtn.addEventListener('mousedown', () => { playerMove(1); holdTimer = setInterval(() => playerMove(1), 90); });
         softDropBtn.addEventListener('mousedown', () => { playerDrop(); holdTimer = setInterval(() => playerDrop(), 60); });
