@@ -123,10 +123,10 @@
 
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xdce0e5); 
-            scene.fog = new THREE.Fog(0xdce0e5, 5, 25);
+            scene.fog = new THREE.Fog(0xdce0e5, 4, 20);
 
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 150);
-            camera.position.set(0.5, 1.4, 3.5); 
+            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 150);
+            camera.position.set(0.2, 1.3, 3.8); 
 
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -140,16 +140,16 @@
             controls.dampingFactor = 0.05;
             controls.enablePan = false; 
             controls.minDistance = 1;
-            controls.maxDistance = 5;
+            controls.maxDistance = 6;
             controls.minPolarAngle = Math.PI / 3; 
-            controls.maxPolarAngle = Math.PI / 1.8;
-            controls.target.set(-0.5, 1.2, 0);
+            controls.maxPolarAngle = Math.PI / 1.7;
+            controls.target.set(-0.5, 1.1, 0);
 
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0xd0d5d9, 0.7);
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0xc0c5c9, 0.7);
             scene.add(hemiLight);
 
-            const windowLight = new THREE.DirectionalLight(0xffffff, 0.4);
-            windowLight.position.set(8, 4, 1);
+            const windowLight = new THREE.DirectionalLight(0xffffff, 0.45);
+            windowLight.position.set(8, 5, 2);
             windowLight.castShadow = true;
             windowLight.shadow.mapSize.width = 2048;
             windowLight.shadow.mapSize.height = 2048;
@@ -162,9 +162,9 @@
             windowLight.shadow.bias = -0.001;
             scene.add(windowLight);
 
-            const ceilingLight = new THREE.PointLight(0xffffff, 0.1, 10);
-            ceilingLight.position.set(1.5, 2.9, 1);
-            scene.add(ceilingLight);
+            const fillLight = new THREE.PointLight(0xffeedd, 0.2, 8);
+            fillLight.position.set(-2, 1.5, 2);
+            scene.add(fillLight);
 
             buildRoomGeometry();
 
@@ -179,47 +179,45 @@
         }
 
         function buildRoomGeometry() {
-            const floorGeo = new THREE.PlaneGeometry(12, 12);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0xc9cdce, roughness: 1.0, metalness: 0.0 });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x98a1a4, roughness: 0.95 });
+            const darkMetalMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5, metalness: 0.8 });
+            const shelfWoodMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.8 });
+            const shelfGoldMat = new THREE.MeshStandardMaterial({ color: 0xc5a059, roughness: 0.3, metalness: 0.7 });
+            const whiteMat = new THREE.MeshStandardMaterial({ color: 0xfcfcfc, roughness: 0.8, metalness: 0.0 });
+
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshStandardMaterial({ color: 0xc9cdce, roughness: 1.0 }));
             floor.rotation.x = -Math.PI / 2;
-            floor.position.set(0, 0, 0);
             floor.receiveShadow = true;
             scene.add(floor);
 
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x9eabae, roughness: 0.95 });
-            
-            const backWallGeo = new THREE.PlaneGeometry(12, 5);
-            const backWall = new THREE.Mesh(backWallGeo, wallMat);
+            const rug = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 4.5), new THREE.MeshStandardMaterial({ color: 0xdfdfdf, roughness: 1.0 }));
+            rug.rotation.x = -Math.PI / 2;
+            rug.position.set(0.5, 0.01, 0.5);
+            rug.receiveShadow = true;
+            scene.add(rug);
+
+            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(12, 5), wallMat);
             backWall.position.set(0, 2.5, -2.5);
             backWall.receiveShadow = true;
             scene.add(backWall);
 
-            const leftWallGeo = new THREE.PlaneGeometry(12, 5);
-            const leftWall = new THREE.Mesh(leftWallGeo, wallMat);
+            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(12, 5), wallMat);
             leftWall.rotation.y = Math.PI / 2;
             leftWall.position.set(-4.5, 2.5, 0);
             leftWall.receiveShadow = true;
             scene.add(leftWall);
 
-            const ceilingGeo = new THREE.PlaneGeometry(12, 12);
-            const ceilingMat = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 1.0 });
-            const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
+            const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 1.0 }));
             ceiling.rotation.x = Math.PI / 2;
             ceiling.position.set(0, 3.5, 0);
             scene.add(ceiling);
 
-            const outsideGeo = new THREE.PlaneGeometry(20, 10);
-            const outsideMat = new THREE.MeshBasicMaterial({ color: 0xe8ecef });
-            const outside = new THREE.Mesh(outsideGeo, outsideMat);
+            const outside = new THREE.Mesh(new THREE.PlaneGeometry(20, 10), new THREE.MeshBasicMaterial({ color: 0xe8ecef }));
             outside.rotation.y = -Math.PI / 2;
             outside.position.set(6, 2.5, 0);
             scene.add(outside);
 
-            const sheerMat = new THREE.MeshStandardMaterial({ 
-                color: 0xffffff, transparent: true, opacity: 0.7, roughness: 0.9, side: THREE.DoubleSide 
-            });
-            const sheer = new THREE.Mesh(new THREE.PlaneGeometry(8, 3.4), sheerMat);
+            const sheer = new THREE.Mesh(new THREE.PlaneGeometry(8, 3.4), new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.65, roughness: 1.0, side: THREE.DoubleSide }));
             sheer.rotation.y = -Math.PI / 2;
             sheer.position.set(4.3, 1.7, 0);
             scene.add(sheer);
@@ -234,21 +232,71 @@
             rightCurtain.castShadow = true;
             scene.add(rightCurtain);
 
-            const cabinetGeo = new THREE.BoxGeometry(3.6, 0.5, 0.5);
-            const cabinetMat = new THREE.MeshStandardMaterial({ color: 0xfcfcfc, roughness: 0.8, metalness: 0.0 });
-            const cabinet = new THREE.Mesh(cabinetGeo, cabinetMat);
+            const chandelierBase = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.1), darkMetalMat);
+            chandelierBase.position.set(1.5, 3.45, 1);
+            scene.add(chandelierBase);
+            const chandelierRod = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.3), darkMetalMat);
+            chandelierRod.position.set(1.5, 3.3, 1);
+            scene.add(chandelierRod);
+            const chandelierCenter = new THREE.Mesh(new THREE.SphereGeometry(0.06), darkMetalMat);
+            chandelierCenter.position.set(1.5, 3.15, 1);
+            scene.add(chandelierCenter);
+
+            const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
+            for(let i=0; i<6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.4), darkMetalMat);
+                arm.rotation.z = Math.PI / 2;
+                arm.rotation.y = angle;
+                arm.position.set(1.5 + Math.cos(angle)*0.2, 3.15 + (i%2===0?0.05:-0.05), 1 + Math.sin(angle)*0.2);
+                scene.add(arm);
+                
+                const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.05), bulbMat);
+                bulb.position.set(1.5 + Math.cos(angle)*0.4, 3.15 + (i%2===0?0.05:-0.05), 1 + Math.sin(angle)*0.4);
+                scene.add(bulb);
+            }
+            const ceilingLight = new THREE.PointLight(0xfffaed, 0.2, 8);
+            ceilingLight.position.set(1.5, 3.1, 1);
+            scene.add(ceilingLight);
+
+            const floorLampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.02), darkMetalMat);
+            floorLampBase.position.set(3.5, 0.01, -2.1);
+            scene.add(floorLampBase);
+            const floorLampRod = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 1.6), darkMetalMat);
+            floorLampRod.position.set(3.5, 0.8, -2.1);
+            scene.add(floorLampRod);
+            const floorLampLight = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.8), bulbMat);
+            floorLampLight.position.set(3.5, 1.2, -2.08);
+            scene.add(floorLampLight);
+            const fLight = new THREE.PointLight(0xffeedd, 0.15, 4);
+            fLight.position.set(3.5, 1.2, -2.0);
+            scene.add(fLight);
+
+            const cabinet = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.5, 0.5), whiteMat);
             cabinet.position.set(-0.8, 0.25, -2.2);
             cabinet.castShadow = true; cabinet.receiveShadow = true;
             scene.add(cabinet);
+            const cabGap1 = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.48, 0.51), darkMetalMat);
+            cabGap1.position.set(-1.4, 0.25, -2.2);
+            scene.add(cabGap1);
+            const cabGap2 = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.48, 0.51), darkMetalMat);
+            cabGap2.position.set(-0.2, 0.25, -2.2);
+            scene.add(cabGap2);
 
-            const shelfWoodMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.8 });
-            const shelfGoldMat = new THREE.MeshStandardMaterial({ color: 0xc5a059, roughness: 0.4, metalness: 0.6 });
-            
+            const soundbar = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 0.1), darkMetalMat);
+            soundbar.position.set(-0.8, 0.53, -2.05);
+            soundbar.castShadow = true;
+            scene.add(soundbar);
+
+            const subwoofer = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.45), darkMetalMat);
+            subwoofer.position.set(-2.8, 0.25, -2.1);
+            subwoofer.castShadow = true; subwoofer.receiveShadow = true;
+            scene.add(subwoofer);
+
             const leftCol = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.8, 0.6), shelfGoldMat);
             leftCol.position.set(-3.8, 1.4, -2.0);
             leftCol.castShadow = true; leftCol.receiveShadow = true;
             scene.add(leftCol);
-            
             const rightCol = leftCol.clone();
             rightCol.position.x = -2.6;
             scene.add(rightCol);
@@ -260,21 +308,68 @@
                 scene.add(board);
             }
 
+            const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.15), new THREE.MeshStandardMaterial({ color: 0xdcd0c0 }));
+            pot.position.set(-1.8, 0.575, -2.1);
+            pot.castShadow = true; scene.add(pot);
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e4233 });
+            for(let i=0; i<5; i++) {
+                const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.3), leafMat);
+                leaf.position.set(-1.8 + (Math.random()-0.5)*0.05, 0.75, -2.1 + (Math.random()-0.5)*0.05);
+                leaf.rotation.set((Math.random()-0.5)*0.5, Math.random()*Math.PI, (Math.random()-0.5)*0.5);
+                leaf.castShadow = true; scene.add(leaf);
+            }
+
+            const bookColors = [0x222222, 0x555555, 0x888888, 0xd0d0d0];
+            for(let b=0; b<12; b++) {
+                const bw = 0.04 + Math.random()*0.02;
+                const bh = 0.2 + Math.random()*0.1;
+                const bd = 0.15 + Math.random()*0.05;
+                const bookMat = new THREE.MeshStandardMaterial({ color: bookColors[Math.floor(Math.random()*bookColors.length)] });
+                const book = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), bookMat);
+                
+                const shelfIdx = Math.floor(Math.random() * 4);
+                const basex = -3.5 + Math.random()*0.6;
+                const basey = 0.32 + shelfIdx*0.6 + bh/2;
+                book.position.set(basex, basey, -2.0);
+                if(Math.random() > 0.8) {
+                    book.rotation.z = (Math.random()-0.5)*0.4; 
+                }
+                book.castShadow = true;
+                scene.add(book);
+            }
+
+            const decorBox = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.2), whiteMat);
+            decorBox.position.set(-3.0, 0.9 + 0.075, -2.0);
+            decorBox.castShadow = true; scene.add(decorBox);
+            
+            const decorSphereGeo = new THREE.IcosahedronGeometry(0.1, 0);
+            const decorSphere = new THREE.Mesh(decorSphereGeo, shelfGoldMat);
+            decorSphere.position.set(-3.3, 1.5 + 0.1, -2.0);
+            decorSphere.castShadow = true; scene.add(decorSphere);
+
             const sofaMat = new THREE.MeshStandardMaterial({ color: 0x7a7c7e, roughness: 0.95 });
             const sofaBase = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.4, 2.5), sofaMat);
             sofaBase.position.set(2.0, 0.2, 1);
             sofaBase.castShadow = true; sofaBase.receiveShadow = true;
             scene.add(sofaBase);
-            
             const sofaBack = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 2.5), sofaMat);
             sofaBack.position.set(2.45, 0.6, 1);
             sofaBack.castShadow = true; sofaBack.receiveShadow = true;
             scene.add(sofaBack);
-            
             const sofaChaise = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.4, 1.5), sofaMat);
             sofaChaise.position.set(1.9, 0.2, -1.0);
             sofaChaise.castShadow = true; sofaChaise.receiveShadow = true;
             scene.add(sofaChaise);
+
+            const pillowMat = new THREE.MeshStandardMaterial({ color: 0x5a5c5e, roughness: 1.0 });
+            const pillow1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.15), pillowMat);
+            pillow1.position.set(2.2, 0.5, 1.8);
+            pillow1.rotation.set(0.2, -0.2, 0);
+            pillow1.castShadow = true; scene.add(pillow1);
+            const pillow2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.15), new THREE.MeshStandardMaterial({ color: 0xc9cdce }));
+            pillow2.position.set(2.2, 0.5, 0.2);
+            pillow2.rotation.set(0.1, 0.3, 0);
+            pillow2.castShadow = true; scene.add(pillow2);
 
             const tableTop = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.04, 0.8), shelfWoodMat);
             tableTop.position.set(0.2, 0.45, 1.0);
@@ -287,6 +382,17 @@
             const leg2 = leg1.clone(); leg2.position.set(-0.48, 0.225, 0.62); scene.add(leg2);
             const leg3 = leg1.clone(); leg3.position.set(0.88, 0.225, 1.38); scene.add(leg3);
             const leg4 = leg1.clone(); leg4.position.set(-0.48, 0.225, 1.38); scene.add(leg4);
+            const bottomMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.36, 0.76), new THREE.MeshStandardMaterial({ color: 0x222222, transparent:true, opacity:0.8 }));
+            bottomMesh.rotation.x = -Math.PI / 2;
+            bottomMesh.position.set(0.2, 0.1, 1.0);
+            scene.add(bottomMesh);
+
+            const tray = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.4), darkMetalMat);
+            tray.position.set(0.5, 0.48, 1.0);
+            tray.castShadow = true; scene.add(tray);
+            const mag = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.01, 0.35), whiteMat);
+            mag.position.set(0.5, 0.495, 1.0);
+            scene.add(mag);
 
             const tvGeo = new THREE.BoxGeometry(3.0, 1.7, 0.04);
             const tvMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.1, metalness: 0.8 });
