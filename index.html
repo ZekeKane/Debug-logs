@@ -2,413 +2,511 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JS Tetris - Arcade Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>KE's 3D Virtual Room</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            background: #14141c;
-            color: #fff;
-            font-family: system-ui, -apple-system, sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 10px;
-            overscroll-behavior-y: contain; 
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            height: 92vh;
+        :root { 
+            --accent-color: #FFE3B3; 
+            --bg-base: #030307; 
+            --gh-text-main: #ffffff;
+            --gh-text-muted: #8b949e;
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-sans: 'Poppins', -apple-system, sans-serif;
         }
-        .header {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            max-width: 400px;
-            margin: 0 auto;
-            width: 100%;
-        }
-        .stat-box {
-            background: rgba(255,255,255,0.05);
-            padding: 5px 15px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .stat-label { font-size: 0.75rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px;}
-        .stat-val { font-size: 1.3rem; font-weight: bold; margin-top: 2px; color: #0DC2FF; }
         
-        .game-container {
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            gap: 15px;
-            margin: auto 0;
-        }
-        canvas {
-            border: solid 3px #3a3a4a;
-            background-color: #080810;
-            display: block;
-            max-height: 44vh;
-            border-radius: 6px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
-        }
-        .side-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        #nextCanvas {
-            border: solid 2px #3a3a4a;
-            background-color: #080810;
-            border-radius: 6px;
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        
+        body, html { 
+            margin: 0; padding: 0; width: 100vw; height: 100vh; 
+            overflow: hidden; background-color: #a8abae; /* 墙壁底色 */
+            font-family: var(--font-sans);
         }
 
-        .controls-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            width: 100%;
-            max-width: 450px;
-            margin: 0 auto;
-            padding-bottom: 20px;
-            user-select: none;
+        #canvas-container {
+            width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1;
         }
-        .dpad-side { display: flex; gap: 12px; }
-        .action-side { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 
-        .btn {
-            background: linear-gradient(135deg, #3a3a4a, #272735);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.1);
-            font-weight: bold;
-            border-radius: 16px;
-            touch-action: none; 
-            box-shadow: 0 6px 0 #15151e, 0 8px 15px rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.05s;
+        /* 2D 遮罩图库展示层 (默认隐藏) */
+        #gallery-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(3, 3, 7, 0.95); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            z-index: 100; display: flex; flex-direction: column;
+            opacity: 0; pointer-events: none; transform: scale(0.98);
+            transition: opacity 0.4s ease, transform 0.4s ease;
         }
-        .btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 2px 0 #15151e, 0 4px 5px rgba(0,0,0,0.4);
-            background: #454558;
-        }
-        .btn-dir { width: 70px; height: 70px; font-size: 1.6rem; }
-        .btn-action { width: 75px; height: 65px; font-size: 1.1rem; }
         
-        .btn-rotate {
-            background: linear-gradient(135deg, #0DC2FF, #009ecf);
-            color: #000;
-            grid-column: span 2;
-            height: 55px;
+        #gallery-overlay.active {
+            opacity: 1; pointer-events: auto; transform: scale(1);
         }
-        .btn-rotate:active { background: #009ecf; }
-        .btn-drop { background: linear-gradient(135deg, #FF0D72, #c40052); font-size: 1.4rem;}
-        .btn-hard-drop { background: linear-gradient(135deg, #FFE138, #d4b200); color: #000; font-size: 1.4rem;}
+
+        .gallery-header {
+            height: 70px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;
+            padding: 0 40px; background: rgba(0, 0, 0, 0.4); border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .gallery-title {
+            color: var(--gh-text-main); font-size: 1.2rem; font-weight: 600; letter-spacing: 2px;
+        }
+
+        .close-btn {
+            background: rgba(255, 255, 255, 0.05); border: none; color: white;
+            padding: 8px 20px; border-radius: 20px; cursor: pointer; font-family: var(--font-mono);
+            transition: all 0.3s ease;
+        }
+        .close-btn:hover { background: var(--accent-color); color: black; }
+
+        .gallery-viewport {
+            flex: 1; overflow-y: auto; padding: 40px; scroll-behavior: smooth;
+        }
+
+        /* 隐藏滚动条 */
+        .gallery-viewport::-webkit-scrollbar { width: 0px; }
+
+        .image-stream {
+            display: flex; flex-direction: column; align-items: center; gap: 40px; max-width: 1200px; margin: 0 auto;
+        }
+
+        .gallery-card {
+            width: 100%; background: rgba(255, 255, 255, 0.02); border-radius: 12px; overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        .gallery-card img { width: 100%; height: auto; display: block; }
+
+        .loader-text {
+            color: var(--gh-text-muted); font-family: var(--font-mono); text-align: center; margin-top: 20vh; font-size: 1.2rem;
+        }
+
+        /* 屏幕中央的准星(可选，用于提示视角中心) */
+        .crosshair {
+            position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; 
+            background: rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; pointer-events: none;
+        }
     </style>
+    <!-- 引入 Three.js 核心及轨道控制器 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
-    <div class="header">
-        <div class="stat-box">
-            <div class="stat-label">Score</div>
-            <div class="stat-val" id="score">0</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-label">Lines</div>
-            <div class="stat-val" id="lines">0</div>
-        </div>
-    </div>
 
-    <div class="game-container">
-        <canvas id="tetris" width="240" height="400"></canvas>
-        <div class="side-panel">
-            <div class="stat-box" style="padding: 5px 8px;">
-                <div class="stat-label" style="font-size:0.65rem; margin-bottom:3px;">Next</div>
-                <canvas id="nextCanvas" width="80" height="80"></canvas>
+    <div id="canvas-container"></div>
+    <div class="crosshair"></div>
+
+    <!-- 2D 图片展示层 -->
+    <div id="gallery-overlay">
+        <div class="gallery-header">
+            <div class="gallery-title" id="gallery-title">PROJECT FOLDER</div>
+            <button class="close-btn" onclick="closeGallery()">CLOSE VIRTUAL FOLDER X</button>
+        </div>
+        <div class="gallery-viewport" id="galleryViewport">
+            <div class="image-stream" id="imageStream">
+                <div class="loader-text">Extracting files from dimensional storage...</div>
             </div>
         </div>
     </div>
 
-    <div class="controls-container">
-        <div class="dpad-side">
-            <button class="btn btn-dir" id="move-left">◀</button>
-            <button class="btn btn-dir" id="move-right">▶</button>
-        </div>
-        
-        <div class="action-side">
-            <button class="btn btn-action btn-rotate" id="rotate">↻ ROTATE</button>
-            <button class="btn btn-action btn-drop" id="drop-down">▼</button>
-            <button class="btn btn-action btn-hard-drop" id="hard-drop">⚡</button>
-        </div>
-    </div>
-
     <script>
-        const canvas = document.getElementById('tetris');
-        const context = canvas.getContext('2d');
-        context.scale(20, 20);
+        // ==========================================
+        // 1. 数据配置 (保留原有的所有逻辑结构)
+        // ==========================================
+        const IMAGE_EXTENSIONS = ['.jpg', '.png', '.jpeg', '.webp', '.JPG', '.PNG'];
+        const MAX_IMAGES_PER_FOLDER = 99;
+        const projectImageCache = {};
+        let currentLoadSession = 0;
 
-        const nextCanvas = document.getElementById('nextCanvas');
-        const nextContext = nextCanvas.getContext('2d');
-        nextContext.scale(20, 20);
-
-        let linesClearedTotal = 0;
-
-        function arenaSweep() {
-            let rowCount = 1;
-            outer: for (let y = arena.length - 1; y > 0; --y) {
-                for (let x = 0; x < arena[y].length; ++x) {
-                    if (arena[y][x] === 0) continue outer;
-                }
-                const row = arena.splice(y, 1)[0].fill(0);
-                arena.unshift(row);
-                ++y;
-                player.score += rowCount * 10;
-                linesClearedTotal++;
-                rowCount *= 2;
-            }
-        }
-
-        function collide(arena, player) {
-            const [m, o] = [player.matrix, player.pos];
-            for (let y = 0; y < m.length; ++y) {
-                for (let x = 0; x < m[y].length; ++x) {
-                    if (m[y][x] !== 0 &&
-                       (arena[y + o.y] &&
-                        arena[y + o.y][x + o.x]) !== 0) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        function createMatrix(w, h) {
-            const matrix = [];
-            while (h--) matrix.push(new Array(w).fill(0));
-            return matrix;
-        }
-
-        function createPiece(type) {
-            if (type === 'T') return [[0, 0, 0], [1, 1, 1], [0, 1, 0]];
-            if (type === 'O') return [[2, 2], [2, 2]];
-            if (type === 'L') return [[0, 3, 0], [0, 3, 0], [0, 3, 3]];
-            if (type === 'J') return [[0, 4, 0], [0, 4, 0], [4, 4, 0]];
-            if (type === 'I') return [[0, 5, 0, 0], [0, 5, 0, 0], [0, 5, 0, 0], [0, 5, 0, 0]];
-            if (type === 'S') return [[0, 6, 6], [6, 6, 0], [0, 0, 0]];
-            if (type === 'Z') return [[7, 7, 0], [0, 7, 7], [0, 0, 0]];
-        }
-
-        function draw() {
-            context.fillStyle = '#080810';
-            context.fillRect(0, 0, canvas.width, canvas.height);
-
-            drawMatrix(arena, {x: 0, y: 0}, context);
-            drawMatrix(player.matrix, player.pos, context);
-
-            nextContext.fillStyle = '#080810';
-            nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
-            const nMatrix = createPiece(player.next);
-            const xOff = nMatrix.length === 4 ? 0 : 0.5;
-            const yOff = nMatrix.length === 2 ? 1 : 0.5;
-            drawMatrix(nMatrix, {x: xOff, y: yOff}, nextContext);
-        }
-
-        const colors = [
-            null, '#FF0D72', '#0DC2FF', '#0DFF72',
-            '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'
+        // 这里我们将原来侧边栏的项目提取出来，映射到 3D 房间的画框上
+        const interactiveTargets = [
+            { id: "e_mp", title: "E_MP DESIGN", path: "images/Transportation/E_MP", fallback: "images/E_MP", color: "#2E3B4E" },
+            { id: "vehicle", title: "VEHICLE RESEARCH", path: "images/Transportation/Vehicle_researches/Works", fallback: "images/Vehicle_researches/Works", color: "#4E2E3B" },
+            { id: "aircraft", title: "AIRCRAFT", path: "images/Transportation/Aircraft_Researches/Aircraft_works", fallback: "images/Aircraft_Researches/Aircraft_works", color: "#2E4E42" },
+            { id: "clay", title: "CLAY BMW", path: "images/Transportation/Clay_Bmw_Gen12/Works", fallback: "images/Clay_Bmw_Gen12/Works", color: "#4E422E" },
+            { id: "modeling", title: "3D MODELING", path: "images/Discoveries/Skills/Modeling_Work", fallback: "images/Skills/Modeling_Work", color: "#3B2E4E" },
+            { id: "slide", title: "SLIDE PROJ", path: "images/Transportation/E_MP/Slide", fallback: "images/E_MP/Slide", color: "#4E3B2E" }
         ];
 
-        function drawMatrix(matrix, offset, ctx) {
-            matrix.forEach((row, y) => {
-                row.forEach((value, x) => {
-                    if (value !== 0) {
-                        ctx.fillStyle = colors[value];
-                        ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
-                        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-                        ctx.lineWidth = 0.05;
-                        ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
-                    }
-                });
+        // ==========================================
+        // 2. Three.js 3D 场景构建 (完全基于照片布局重构)
+        // ==========================================
+        let scene, camera, renderer, controls, raycaster, mouse;
+        let interactableObjects = [];
+
+        function init3DScene() {
+            const container = document.getElementById('canvas-container');
+
+            // 场景与雾化效果(营造景深真实感)
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xa8abae); // 照片墙壁的高级灰
+            scene.fog = new THREE.Fog(0xa8abae, 5, 20);
+
+            // 摄像机设置 (模拟人眼站在客厅中央偏右，看向电视墙)
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0.5, 1.4, 3.5); 
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 限制像素比优化性能
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // 控制器 (Drag & Rolling)
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enablePan = false; // 禁止平移，仅限原地转头
+            controls.minDistance = 1;
+            controls.maxDistance = 5;
+            controls.minPolarAngle = Math.PI / 3; // 限制上下看角度
+            controls.maxPolarAngle = Math.PI / 1.8;
+            // 将视点中心稍微对准电视墙
+            controls.target.set(-0.5, 1.2, 0);
+
+            // 光影布置
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // 柔和环境光
+            scene.add(ambientLight);
+
+            // 模拟照片右上角的吸顶灯
+            const ceilingLight = new THREE.PointLight(0xfffaed, 0.5, 20);
+            ceilingLight.position.set(1.5, 3, 1);
+            ceilingLight.castShadow = true;
+            scene.add(ceilingLight);
+
+            // 模拟照片右侧窗户透进来的自然侧光
+            const windowLight = new THREE.DirectionalLight(0xe0f2fe, 0.8);
+            windowLight.position.set(5, 2, 2);
+            windowLight.castShadow = true;
+            windowLight.shadow.mapSize.width = 2048;
+            windowLight.shadow.mapSize.height = 2048;
+            scene.add(windowLight);
+
+            buildRoomGeometry();
+
+            // 射线检测相关
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('click', onClick);
+
+            animate();
+        }
+
+        // 核心：纯代码搭建几何抽象派实体房间
+        function buildRoomGeometry() {
+            // 1. 地板 (浅灰色地毯质感)
+            const floorGeo = new THREE.PlaneGeometry(20, 20);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0xd3d4d3, roughness: 0.9, metalness: 0.1 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // 2. 主背景墙 (电视墙)
+            const wallGeo = new THREE.PlaneGeometry(20, 10);
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0xa8abae, roughness: 0.8 });
+            const wall = new THREE.Mesh(wallGeo, wallMat);
+            wall.position.z = -2;
+            wall.position.y = 5;
+            wall.receiveShadow = true;
+            scene.add(wall);
+
+            // 3. 悬浮白色电视柜 (底部中央)
+            const cabinetGeo = new THREE.BoxGeometry(3.6, 0.5, 0.5);
+            const cabinetMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.2, metalness: 0.1 });
+            const cabinet = new THREE.Mesh(cabinetGeo, cabinetMat);
+            cabinet.position.set(-0.8, 0.4, -1.7);
+            cabinet.castShadow = true; cabinet.receiveShadow = true;
+            scene.add(cabinet);
+
+            // 4. 左侧实木+金属骨架书架
+            const shelfWoodMat = new THREE.MeshStandardMaterial({ color: 0x4a2a18, roughness: 0.7 });
+            const shelfGoldMat = new THREE.MeshStandardMaterial({ color: 0xc5a059, roughness: 0.3, metalness: 0.8 });
+            // 书架主体立柱
+            const leftCol = new THREE.Mesh(new THREE.BoxGeometry(0.05, 2.8, 0.6), shelfWoodMat);
+            leftCol.position.set(-3.5, 1.4, -1.6);
+            leftCol.castShadow = true;
+            scene.add(leftCol);
+            const rightCol = leftCol.clone();
+            rightCol.position.x = -2.3;
+            scene.add(rightCol);
+            // 书架层板
+            for(let i=0; i<5; i++) {
+                const board = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.05, 0.6), shelfWoodMat);
+                board.position.set(-2.9, 0.3 + i*0.6, -1.6);
+                board.castShadow = true; scene.add(board);
+            }
+
+            // 5. 右侧灰色沙发 (抽象成几个大几何块)
+            const sofaMat = new THREE.MeshStandardMaterial({ color: 0x8c8f91, roughness: 0.9 });
+            const sofaBase = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.4, 2.5), sofaMat);
+            sofaBase.position.set(2.5, 0.2, 1);
+            sofaBase.castShadow = true; scene.add(sofaBase);
+            const sofaBack = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 2.5), sofaMat);
+            sofaBack.position.set(3.0, 0.6, 1);
+            sofaBack.castShadow = true; scene.add(sofaBack);
+            const sofaChaise = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.4, 1.5), sofaMat);
+            sofaChaise.position.set(2.4, 0.2, -1.0);
+            sofaChaise.castShadow = true; scene.add(sofaChaise);
+
+            // 6. 中央胡桃木茶几
+            const tableTop = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.05, 0.8), shelfWoodMat);
+            tableTop.position.set(0.5, 0.45, 1.0);
+            tableTop.castShadow = true; scene.add(tableTop);
+            const tableLegs = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5, metalness: 0.9 });
+            const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.45, 0.03), tableLegs);
+            leg1.position.set(1.15, 0.225, 0.65); scene.add(leg1);
+            const leg2 = leg1.clone(); leg2.position.set(-0.15, 0.225, 0.65); scene.add(leg2);
+            const leg3 = leg1.clone(); leg3.position.set(1.15, 0.225, 1.35); scene.add(leg3);
+            const leg4 = leg1.clone(); leg4.position.set(-0.15, 0.225, 1.35); scene.add(leg4);
+
+            // 7. 壁挂大屏幕 (交互主阵地)
+            const tvGeo = new THREE.BoxGeometry(3.0, 1.7, 0.05);
+            const tvMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.1, metalness: 0.8 });
+            const tv = new THREE.Mesh(tvGeo, tvMat);
+            tv.position.set(-0.8, 1.5, -1.95);
+            scene.add(tv);
+
+            // 发光的屏幕背板
+            const screenGeo = new THREE.PlaneGeometry(2.9, 1.6);
+            const screenMat = new THREE.MeshBasicMaterial({ color: 0x111625 });
+            const screen = new THREE.Mesh(screenGeo, screenMat);
+            screen.position.set(-0.8, 1.5, -1.92);
+            scene.add(screen);
+
+            // 8. 创建可点击的网格项 (App UI 风格，散布在电视屏幕上)
+            const startX = -1.8;
+            const startY = 1.9;
+            const gapX = 0.7;
+            const gapY = 0.55;
+
+            interactiveTargets.forEach((target, index) => {
+                const col = index % 4;
+                const row = Math.floor(index / 4);
+                
+                // 使用 Canvas 动态生成带文字的贴图
+                const canvas = document.createElement('canvas');
+                canvas.width = 512; canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                // 渐变背景
+                const gradient = ctx.createLinearGradient(0, 0, 512, 256);
+                gradient.addColorStop(0, target.color);
+                gradient.addColorStop(1, '#1a1a1a');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 512, 256);
+                // 文字绘制
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 45px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(target.title, 256, 128);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                const itemMat = new THREE.MeshBasicMaterial({ map: texture });
+                const itemGeo = new THREE.PlaneGeometry(0.6, 0.35);
+                const itemMesh = new THREE.Mesh(itemGeo, itemMat);
+
+                itemMesh.position.set(startX + col * gapX, startY - row * gapY, -1.91);
+                
+                // 绑定数据，供射线检测使用
+                itemMesh.userData = { isInteractive: true, projectConfig: target };
+                scene.add(itemMesh);
+                interactableObjects.push(itemMesh);
             });
         }
 
-        function merge(arena, player) {
-            player.matrix.forEach((row, y) => {
-                row.forEach((value, x) => {
-                    if (value !== 0) {
-                        arena[y + player.pos.y][x + player.pos.x] = value;
-                    }
+        // ==========================================
+        // 3. 交互逻辑 (射线检测与点击)
+        // ==========================================
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onPointerMove(event) {
+            // 计算归一化设备坐标 (-1 到 +1)
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactableObjects);
+
+            // 当悬停在目标上时，改变鼠标样式为小手，无其他明显UI破坏沉浸感
+            if (intersects.length > 0) {
+                document.body.style.cursor = 'pointer';
+                // 极微弱的悬停放大效果
+                intersects[0].object.scale.set(1.05, 1.05, 1.05);
+            } else {
+                document.body.style.cursor = 'default';
+                interactableObjects.forEach(obj => obj.scale.set(1, 1, 1));
+            }
+        }
+
+        function onClick(event) {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactableObjects);
+
+            if (intersects.length > 0) {
+                const targetData = intersects[0].object.userData.projectConfig;
+                openGallery(targetData);
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); // 必须调用更新以实现阻尼滑动
+            renderer.render(scene, camera);
+        }
+
+        // ==========================================
+        // 4. 读取逻辑 (完全继承之前的图片搜索逻辑)
+        // ==========================================
+        const galleryOverlay = document.getElementById('gallery-overlay');
+        const imageStream = document.getElementById('imageStream');
+        const galleryTitle = document.getElementById('gallery-title');
+
+        function openGallery(projectData) {
+            galleryOverlay.classList.add('active');
+            galleryTitle.innerText = projectData.title + " // FILES EXTRACTED";
+            imageStream.innerHTML = '<div class="loader-text">Extracting files from dimensional storage...</div>';
+            
+            document.getElementById('galleryViewport').scrollTo({ top: 0, behavior: 'instant' });
+
+            currentLoadSession++;
+            loadProjectImages(projectData, currentLoadSession);
+        }
+
+        function closeGallery() {
+            galleryOverlay.classList.remove('active');
+            setTimeout(() => { imageStream.innerHTML = ''; }, 400); // 等待动画结束清空
+        }
+
+        async function loadProjectImages(projectObj, sessionToken) {
+            const cacheKey = projectObj.path; 
+
+            if (projectImageCache[cacheKey]) {
+                const cachedUrls = projectImageCache[cacheKey];
+                imageStream.innerHTML = '';
+                cachedUrls.forEach((url, i) => {
+                    const paddedNum = String(i + 1).padStart(2, '0');
+                    renderImageCard(url, paddedNum);
                 });
+                return; 
+            }
+
+            let activeIndex = 1;
+            const validUrls = []; 
+            let retryCount = 0;
+            const MAX_RETRIES = 2;
+
+            let isFirstImage = true;
+
+            while (activeIndex <= MAX_IMAGES_PER_FOLDER) {
+                if (sessionToken !== currentLoadSession) return;
+
+                const paddedNum = String(activeIndex).padStart(2, '0');
+                let foundImage = await testImageSrc(projectObj.path, paddedNum, sessionToken);
+                
+                if (sessionToken !== currentLoadSession) return;
+
+                if (!foundImage && projectObj.fallback) {
+                    foundImage = await testImageSrc(projectObj.fallback, paddedNum, sessionToken);
+                }
+                
+                if (sessionToken !== currentLoadSession) return;
+
+                if (foundImage) {
+                    if (isFirstImage) { imageStream.innerHTML = ''; isFirstImage = false; }
+                    validUrls.push(foundImage); 
+                    renderImageCard(foundImage, paddedNum);
+                    activeIndex++;
+                    retryCount = 0; 
+                } else {
+                    retryCount++;
+                    if (retryCount > MAX_RETRIES) break; 
+                    await new Promise(r => setTimeout(r, 800));
+                }
+            }
+
+            if (validUrls.length > 0 && sessionToken === currentLoadSession) {
+                projectImageCache[cacheKey] = validUrls;
+            }
+
+            if (activeIndex === 1 && sessionToken === currentLoadSession) {
+                imageStream.innerHTML = `
+                  <div class="loader-text" style="color:#ff4444">
+                    [ERROR] NO SIGNAL DETECTED.<br><br>
+                    <span style="font-size:0.8rem; color:#888;">Ensure images are named '01.png', '02.jpg' in the repository.</span>
+                  </div>
+                `;
+            }
+        }
+
+        function testImageSrc(folderPath, num, sessionToken) {
+            return new Promise((resolve) => {
+                let failedCount = 0;
+                let resolved = false;
+                const imgObjects = [];
+
+                const checkSession = setInterval(() => {
+                    if (sessionToken !== currentLoadSession && !resolved) {
+                        resolved = true;
+                        clearInterval(checkSession);
+                        imgObjects.forEach(img => img.src = ''); 
+                        resolve(null);
+                    }
+                }, 100);
+
+                IMAGE_EXTENSIONS.forEach(ext => {
+                    const testUrl = encodeURI(`${folderPath}/${num}${ext}`);
+                    const img = new Image();
+                    imgObjects.push(img);
+                    
+                    img.onload = () => {
+                        if (!resolved) {
+                            resolved = true;
+                            clearInterval(checkSession);
+                            resolve(testUrl);
+                        }
+                    };
+                    
+                    img.onerror = () => {
+                        if (resolved) return;
+                        failedCount++;
+                        if (failedCount === IMAGE_EXTENSIONS.length) {
+                            resolved = true;
+                            clearInterval(checkSession);
+                            resolve(null);
+                        }
+                    };
+                    img.src = testUrl;
+                });
+                
+                setTimeout(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        clearInterval(checkSession);
+                        imgObjects.forEach(img => img.src = '');
+                        resolve(null);
+                    }
+                }, 8000); 
             });
         }
 
-        function playerDrop() {
-            player.pos.y++;
-            if (collide(arena, player)) {
-                player.pos.y--;
-                merge(arena, player);
-                playerReset();
-                arenaSweep();
-                updateScore();
-            }
-            dropCounter = 0;
+        function renderImageCard(src, indexStr) {
+            const card = document.createElement('div');
+            card.className = 'gallery-card';
+            const img = document.createElement('img');
+            img.src = src;
+            img.decoding = 'async';
+            img.loading = 'eager'; 
+            card.appendChild(img);
+            imageStream.appendChild(card);
         }
 
-        function playerHardDrop() {
-            while (!collide(arena, player)) {
-                player.pos.y++;
-            }
-            player.pos.y--;
-            merge(arena, player);
-            playerReset();
-            arenaSweep();
-            updateScore();
-            dropCounter = 0;
-        }
-
-        function playerMove(dir) {
-            player.pos.x += dir;
-            if (collide(arena, player)) {
-                player.pos.x -= dir;
-            }
-        }
-
-        const pieces = 'ILJOTSZ';
-        function playerReset() {
-            if (!player.next) {
-                player.next = pieces[pieces.length * Math.random() | 0];
-            }
-            player.matrix = createPiece(player.next);
-            player.next = pieces[pieces.length * Math.random() | 0];
-            
-            player.pos.y = 0;
-            player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
-            
-            if (collide(arena, player)) {
-                arena.forEach(row => row.fill(0));
-                player.score = 0;
-                linesClearedTotal = 0;
-                updateScore();
-            }
-        }
-
-        function playerRotate(dir) {
-            const pos = player.pos.x;
-            let offset = 1;
-            rotate(player.matrix, dir);
-            while (collide(arena, player)) {
-                player.pos.x += offset;
-                offset = -(offset + (offset > 0 ? 1 : -1));
-                if (offset > player.matrix[0].length) {
-                    rotate(player.matrix, -dir);
-                    player.pos.x = pos;
-                    return;
-                }
-            }
-        }
-
-        function rotate(matrix, dir) {
-            for (let y = 0; y < matrix.length; ++y) {
-                for (let x = 0; x < y; ++x) {
-                    [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
-                }
-            }
-            if (dir > 0) matrix.forEach(row => row.reverse());
-            else matrix.reverse();
-        }
-
-        let dropCounter = 0;
-        let dropInterval = 1000;
-        let lastTime = 0;
-
-        function update(time = 0) {
-            const deltaTime = time - lastTime;
-            lastTime = time;
-
-            dropCounter += deltaTime;
-            if (dropCounter > dropInterval) {
-                playerDrop();
-            }
-
-            draw();
-            requestAnimationFrame(update);
-        }
-
-        function updateScore() {
-            document.getElementById('score').innerText = player.score;
-            document.getElementById('lines').innerText = linesClearedTotal;
-        }
-
-        const arena = createMatrix(12, 20);
-        const player = { pos: {x: 0, y: 0}, matrix: null, next: null, score: 0 };
-
-        // Desktop Key Bindings
-        document.addEventListener('keydown', event => {
-            if (event.keyCode === 37) playerMove(-1);
-            else if (event.keyCode === 39) playerMove(1);
-            else if (event.keyCode === 40) playerDrop();
-            else if (event.keyCode === 32) playerHardDrop();
-            else if (event.keyCode === 38 || event.keyCode === 87 || event.keyCode === 81) playerRotate(1);
-        });
-
-        // Direct Touch Loop Repeater Engine
-        let holdTimer = null;
-
-        function clearHold() {
-            if (holdTimer) {
-                clearInterval(holdTimer);
-                holdTimer = null;
-            }
-        }
-
-        const leftBtn = document.getElementById('move-left');
-        const rightBtn = document.getElementById('move-right');
-        const softDropBtn = document.getElementById('drop-down');
-
-        // Left hold button
-        leftBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            playerMove(-1);
-            clearHold();
-            holdTimer = setInterval(() => playerMove(-1), 90);
-        });
-        leftBtn.addEventListener('touchend', (e) => { e.preventDefault(); clearHold(); });
-        leftBtn.addEventListener('touchcancel', clearHold);
-
-        // Right hold button
-        rightBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            playerMove(1);
-            clearHold();
-            holdTimer = setInterval(() => playerMove(1), 90);
-        });
-        rightBtn.addEventListener('touchend', (e) => { e.preventDefault(); clearHold(); });
-        rightBtn.addEventListener('touchcancel', clearHold);
-
-        // Soft Drop hold button
-        softDropBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            playerDrop();
-            clearHold();
-            holdTimer = setInterval(() => playerDrop(), 60);
-        });
-        softDropBtn.addEventListener('touchend', (e) => { e.preventDefault(); clearHold(); });
-        softDropBtn.addEventListener('touchcancel', clearHold);
-
-        // Instant Single Taps
-        document.getElementById('hard-drop').addEventListener('touchstart', (e) => { e.preventDefault(); playerHardDrop(); });
-        document.getElementById('rotate').addEventListener('touchstart', (e) => { e.preventDefault(); playerRotate(1); });
-
-        // Desktop Click Mappings
-        leftBtn.addEventListener('mousedown', () => { playerMove(-1); holdTimer = setInterval(() => playerMove(-1), 90); });
-        rightBtn.addEventListener('mousedown', () => { playerMove(1); holdTimer = setInterval(() => playerMove(1), 90); });
-        softDropBtn.addEventListener('mousedown', () => { playerDrop(); holdTimer = setInterval(() => playerDrop(), 60); });
-        window.addEventListener('mouseup', clearHold);
-        document.getElementById('hard-drop').addEventListener('click', () => playerHardDrop());
-        document.getElementById('rotate').addEventListener('click', () => playerRotate(1));
-
-        playerReset();
-        updateScore();
-        update();
+        // 初始化 3D 环境
+        init3DScene();
     </script>
 </body>
 </html>
